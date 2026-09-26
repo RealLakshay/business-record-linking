@@ -1,0 +1,7 @@
+student_resource/code_red_submission/work/
+student_resource/code_red_submission/work_notebook/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+__pycache__/
+.ipynb_checkpoints/
