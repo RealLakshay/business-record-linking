@@ -76,9 +76,17 @@ def row_features(row: Dict[str, str]) -> Dict[str, str]:
     }
 
 
-def read_rows(path: Path) -> Iterator[Dict[str, str]]:
+SOURCE_COLUMNS = {"entity_id", "business_name", "business_address", "country"}
+GROUND_TRUTH_COLUMNS = {"source1_entity_id", "matched_entity_ids"}
+
+
+def read_rows(path: Path, expected_columns: Set[str] | None = None) -> Iterator[Dict[str, str]]:
+    expected = expected_columns or (GROUND_TRUTH_COLUMNS if path.name == "train_ground_truth.tsv" else SOURCE_COLUMNS)
     with path.open("r", encoding="utf-8", newline="") as handle:
-        yield from csv.DictReader(handle, delimiter="\t")
+        reader = csv.DictReader(handle, delimiter="\t")
+        if not expected.issubset(set(reader.fieldnames or [])):
+            raise ValueError(f"Invalid TSV header in {path}: found {reader.fieldnames}; expected {sorted(expected)}")
+        yield from reader
 
 
 def create_index(db_path: Path, source_paths: Sequence[Path], reuse_existing: bool = True) -> None:
@@ -168,7 +176,7 @@ def similarity_features(left: Dict[str, str], right: Tuple[str, str, str, str, s
 
 def truth_map(path: Path) -> Dict[str, Set[str]]:
     result = {}
-    for row in read_rows(path):
+    for row in read_rows(path, GROUND_TRUTH_COLUMNS):
         result[row["source1_entity_id"]] = {item for item in row["matched_entity_ids"].split(",") if item}
     return result
 
